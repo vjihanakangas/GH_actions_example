@@ -1,0 +1,43 @@
+name: Push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs: 
+      date_stamp_output: ${{ steps.date.outputs.value }}
+      commit_sha_output: ${{ steps.sha.outputs.value }}
+    steps:
+      - name: Get date
+        id: date
+        run: echo "value=25.11.2023" >> "$GITHUB_OUTPUT"
+      - name: Get sha
+        id: sha
+        run: |
+          echo "Getting commit sha..."
+          echo "value=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+  
+  build_some_project:
+    runs-on: ubuntu-latest
+    needs: prepare
+    timeout-minutes: 60
+    steps:
+      - name: Build project
+        id: build
+        run: |
+          echo "Building project from commit: ${{ needs.prepare.outputs.commit_sha_output }}"
+          echo "Datestamp for build: ${{ needs.prepare.outputs.date_stamp_output }}"
+          echo "*Some build commands here*"
+
+  notify_on_fail:
+    needs: [ prepare, build_some_project ]
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on fail
+        id: notify
+        run: |
+          echo "The workflow has failed. See on github: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
